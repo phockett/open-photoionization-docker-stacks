@@ -1,0 +1,23 @@
+version: "3.7"
+
+services:
+  limapack:
+    # Build image
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Env setting here not working? Set in .env file instead.
+    # environment:
+    #   - DATADIR="/data"
+
+    # Mount volume from local folder
+    volumes:
+      - ./jobs:${DATADIR}
+
+    # Run jobs found in data dir.
+    command: bash -c "cd ${DATADIR} && ./runJobs.sh ${DATADIR}"
+    # command: bash -c "cd /data && ./runJobs.sh"
+    # command: bash -c "cd /data && ls -ll"
+    # command: bash
+    # command: /bin/bash
