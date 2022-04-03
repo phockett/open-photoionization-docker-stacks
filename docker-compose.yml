@@ -1,0 +1,54 @@
+# Quick build for open-photoionization-docker-stacks
+# 03/04/22
+# For more options, see https://docs.docker.com/compose/reference/
+#
+# TODO:
+# - test builds
+# - decide on default paths. Note named volumes can't mount subdirs, e.g. https://stackoverflow.com/questions/38164939/can-we-mount-sub-directories-of-a-named-volume-in-docker
+#   Either use symlinks per service, or bind mounts with .env file?
+#
+
+version: "3.7"
+
+services:
+  limapack:
+    # Build image
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Env setting here not working? Set in .env file instead.
+    # environment:
+    #   - DATADIR="/data"
+
+    # Mount volume from local folder
+    volumes:
+      - open_photoionziation_data:${DATADIR}
+
+    # Run jobs found in data dir.
+    command: bash -c "cd ${DATADIR} && ./runJobs.sh ${DATADIR}"
+    # command: bash -c "cd /data && ./runJobs.sh"
+    # command: bash -c "cd /data && ls -ll"
+    # command: bash
+    # command: /bin/bash
+
+  # JupyterLab + ePSproc + PEMtk + dependencies
+  jupyterlab:
+    build:
+      context: .
+      dockerfile: Dockerfile-PEMtk
+
+    image: jupyterlab_epsproc_dev
+    container_name: jupyterlab-ePSproc-dev
+    # network_mode: none
+    # command: echo
+    ports:
+      - 8966:8888
+    volumes:
+      - open_photoionziation_data:/home/jovyan/data
+
+
+
+# Use Docker-managed volume as default case.
+volumes:
+  open_photoionziation_data:
