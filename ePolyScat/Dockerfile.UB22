@@ -1,0 +1,138 @@
+# ePS build tests
+# Version from fresh base.
+# Using setup from https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/Dockerfile.gamess
+#
+# Note this is also configured for build args, with script https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/build.sh
+#
+# 04/07/22 - minimal version with some install options removed, force to Gfortran v9?
+# AH, issue is libopenmpi-dev pulling current compilers.
+# Can run gfortran-9 after install OK.
+# UPDATE: working build after setting gfortran-9 as default.
+
+ARG IMAGE_VERSION=${IMAGE_VERSION:-latest}
+FROM ubuntu:$IMAGE_VERSION
+
+MAINTAINER DrSnowbird "openkbs.org@gmail.com"
+
+ENV DEBIAN_FRONTEND noninteractive
+
+#### Build argument ####
+# Modify by adding the following argument during docker build:
+#
+#   --build-arg BLAS=[none|atlas]
+#
+ARG BLAS=${BLAS:-atlas}
+ARG BLAS_DIR=${BLAS_DIR:-/usr/lib/atlas-base}
+
+ARG MPI=${MPI:-openmpi}
+ARG MPI_DIR=${MPI_DIR:-/usr/lib/openmpi}
+
+# ref: http://lsi.ugr.es/jmantas/pdp/ayuda/datos/instalaciones/Install_OpenMPI_en.pdf
+
+RUN apt-get update \
+    && apt-get install -y nano make gfortran-9 \
+    && apt-get install -y openmpi-bin openmpi-common libopenmpi-dev \
+    # libopenmpi-dev \  # THIS PULLS gcc and gfortran latest versions? Only want libs!
+    && apt-get install -y libblas-dev liblapack-dev \
+    && apt-get install -y libatlas-base-dev libatlas3-base \
+    && apt-get clean autoclean \
+    && apt-get autoremove -y
+
+# Force gfortran-9 to default version
+# Note libopenmpi-dev installs current gfortran too.
+# TODO: try light weight options with custom build https://www.open-mpi.org/faq/?category=building#easy-build
+# See https://askubuntu.com/questions/1300510/change-gfortran-version-on-ubuntu
+RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-9 100 && \
+    update-alternatives --set gfortran /usr/bin/gfortran-9
+
+
+
+#  sudo apt-get install openmpi-bin libopenmpi-dev
+#  sudo apt-get install libscalapack-openmpi-dev
+#  sudo apt-get install libblas-dev
+#  sudo apt-get install liblapack-dev
+#  sudo apt-get install libatlas-base-dev
+
+ENV LD_LIBRARY_PATH=${BLAS_DIR}:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=${MPI_DIR}:$LD_LIBRARY_PATH
+
+#### ---- fix openmpi's include folder is located at different location
+RUN mkdir -p /usr/lib64 && \
+    ln -s ${BLAS_DIR} /usr/lib64/atlas && \
+    ln -s ${MPI_DIR} /usr/lib64/openmpi && \
+    ln -s ${MPI_DIR} /opt/openmpi
+
+#*** ePolyScat stuff
+# Test installation from tar file.
+# Following style from https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/Dockerfile
+
+WORKDIR /opt
+
+# TODO - set other env stuff here, currently in scripts
+# ARG MACH=ubuntu_gfortran
+
+#*** ePS Source from Tar
+# ARG SOURCEDIR=/data/install-local
+ARG SOURCEDIR=./source
+
+ARG ePS_TAR=ePolyScatDistVer3885d87.tgz
+ARG INSTALL_DIR=${INSTALL_DIR:-/opt/ePolyScat.3885d87}
+
+# COPY tar file only
+# COPY ${SOURCEDIR}/${ePS_TAR} ./
+# COPY ${ePS_TAR} ./
+
+# COPY full dir, including scripts
+COPY ${SOURCEDIR}/* ./
+
+# Untar
+RUN mkdir -p ${INSTALL_DIR} && \
+    mv ${ePS_TAR} ${INSTALL_DIR}/ && \
+    cd ${INSTALL_DIR} && \
+    tar xvfz ${ePS_TAR} --strip-components=1
+
+# Note --strip-components to ignore default base dir, `ePolyScatDistVer/` in current source
+
+#*** Build with script
+# Issues with source?
+# RUN source ./ePS_v3885d87_paths_ubuntu-gfortran.sh && \
+
+# Set env vars as source not working
+ENV MACH=ubuntu_gfortran
+ENV TMPDIR=/tmp
+ENV pe=${INSTALL_DIR}
+ENV epsBinDir=${pe}/bin/${MACH}
+
+# Can't compile in this env - missing some libs?
+# UPDATE - now fixed with system installs above.
+RUN ./ePS_v3885d87_paths_ubuntu-gfortran.sh && \
+    cp ubuntu_gfortran* ${INSTALL_DIR}/include && \
+    cd ${INSTALL_DIR} && \
+    make all
+
+# Patch ePolyScat run script
+# Fixes mpirun dir
+# TODO: should fix in MACH.gen file instead.
+# RUN patch -u ${epsBinDir}/ePolyScat -i ePolyScat.3885d87.patch
+# UPDATE: now fixed in .gen file (for system mpirun)
+
+# Test build - currently need MPI flags to run as root.
+# TODO: fix make tests
+ENV OMPI_ALLOW_RUN_AS_ROOT=1
+ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
+# Run single test
+# RUN ${pe}/ePolyScat ${pe}/tests/test01.inp > ${pe}/tests/test01.out
+#  diff ${pe}/tests/test01.out ${pe}/tests/test01.ostnd
+
+# Run all tests
+# Should set this as a separate script, as it can take a while
+# TODO: diffs with std output?
+# RUN mkdir ${pe}/tests/outdir.${MACH} && /
+#    cd ${INSTALL_DIR} && \
+#    make testall
+
+# Install numdiff for testing
+RUN ./installNumdiff.sh
+
+CMD [ "/bin/bash" ]
