@@ -1,18 +1,38 @@
-# ePS build tests
-# Version from fresh base.
-# Using setup from https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/Dockerfile.gamess
+# ePS Docker build tests - Ubutnu base with OpenMPI
 #
-# Note this is also configured for build args, with script https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/build.sh
+# Based on DrSnowbird's Gamess base setup from https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/Dockerfile.gamess
+#   MAINTAINER DrSnowbird "openkbs.org@gmail.com"
+# Note this is also configured for passing build args, with script https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/build.sh
+#
+# 07/07/22 - tidied up a bit.
 #
 # 04/07/22 - minimal version with some install options removed, force to Gfortran v9?
 # AH, issue is libopenmpi-dev pulling current compilers.
 # Can run gfortran-9 after install OK.
 # UPDATE: working build after setting gfortran-9 as default.
 
+
+#*** Main setup config
 ARG IMAGE_VERSION=${IMAGE_VERSION:-latest}
 FROM ubuntu:$IMAGE_VERSION
 
-MAINTAINER DrSnowbird "openkbs.org@gmail.com"
+#*** ePolyScat build setup args
+WORKDIR /opt
+ENV NCPUS=24
+
+ARG SOURCEDIR=./source
+ARG ePS_TAR=${ePS_TAR:-ePolyScatDistVer3885d87.tgz}
+ARG INSTALL_DIR=${INSTALL_DIR:-/opt/ePolyScat.3885d87}
+
+ENV MACH=ubuntu_gfortran
+ENV TMPDIR=/tmp
+ENV pe=${INSTALL_DIR}
+ENV epsBinDir=${pe}/bin/${MACH}
+
+
+#*** Original setup with tweaks follows
+
+# MAINTAINER DrSnowbird "openkbs.org@gmail.com"
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -28,30 +48,24 @@ ARG MPI=${MPI:-openmpi}
 ARG MPI_DIR=${MPI_DIR:-/usr/lib/openmpi}
 
 # ref: http://lsi.ugr.es/jmantas/pdp/ayuda/datos/instalaciones/Install_OpenMPI_en.pdf
-
+# Install tools & libs - note default gfortran for UB22 is v11, and won't compile ePS (TBC). v9 works.
 RUN apt-get update \
     && apt-get install -y nano make gfortran-9 \
     && apt-get install -y openmpi-bin openmpi-common libopenmpi-dev \
-    # libopenmpi-dev \  # THIS PULLS gcc and gfortran latest versions? Only want libs!
     && apt-get install -y libblas-dev liblapack-dev \
     && apt-get install -y libatlas-base-dev libatlas3-base \
+    && apt-get install -y numdiff \
     && apt-get clean autoclean \
     && apt-get autoremove -y
 
+#  apt-get install libscalapack-openmpi-dev  # Not required?
+
 # Force gfortran-9 to default version
-# Note libopenmpi-dev installs current gfortran too.
+# Note libopenmpi-dev installs current gfortran (v11 for UB22) too.
 # TODO: try light weight options with custom build https://www.open-mpi.org/faq/?category=building#easy-build
 # See https://askubuntu.com/questions/1300510/change-gfortran-version-on-ubuntu
 RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-9 100 && \
     update-alternatives --set gfortran /usr/bin/gfortran-9
-
-
-
-#  sudo apt-get install openmpi-bin libopenmpi-dev
-#  sudo apt-get install libscalapack-openmpi-dev
-#  sudo apt-get install libblas-dev
-#  sudo apt-get install liblapack-dev
-#  sudo apt-get install libatlas-base-dev
 
 ENV LD_LIBRARY_PATH=${BLAS_DIR}:$LD_LIBRARY_PATH
 ENV LD_LIBRARY_PATH=${MPI_DIR}:$LD_LIBRARY_PATH
@@ -66,18 +80,7 @@ RUN mkdir -p /usr/lib64 && \
 # Test installation from tar file.
 # Following style from https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/Dockerfile
 
-WORKDIR /opt
-
-# TODO - set other env stuff here, currently in scripts
-# ARG MACH=ubuntu_gfortran
-
 #*** ePS Source from Tar
-# ARG SOURCEDIR=/data/install-local
-ARG SOURCEDIR=./source
-
-ARG ePS_TAR=ePolyScatDistVer3885d87.tgz
-ARG INSTALL_DIR=${INSTALL_DIR:-/opt/ePolyScat.3885d87}
-
 # COPY tar file only
 # COPY ${SOURCEDIR}/${ePS_TAR} ./
 # COPY ${ePS_TAR} ./
@@ -94,30 +97,17 @@ RUN mkdir -p ${INSTALL_DIR} && \
 # Note --strip-components to ignore default base dir, `ePolyScatDistVer/` in current source
 
 #*** Build with script
-# Issues with source?
-# RUN source ./ePS_v3885d87_paths_ubuntu-gfortran.sh && \
+# RUN ./ePS_v3885d87_paths_ubuntu-gfortran.sh && \
+#    cp ubuntu_gfortran* ${INSTALL_DIR}/include && \
+#    cd ${INSTALL_DIR} && \
+#    make all
 
-# Set env vars as source not working
-ENV MACH=ubuntu_gfortran
-ENV TMPDIR=/tmp
-ENV pe=${INSTALL_DIR}
-ENV epsBinDir=${pe}/bin/${MACH}
-
-# Can't compile in this env - missing some libs?
-# UPDATE - now fixed with system installs above.
-RUN ./ePS_v3885d87_paths_ubuntu-gfortran.sh && \
+RUN mkdir -p $pe/obj/$MACH && mkdir -p $pe/bin/$MACH && \
     cp ubuntu_gfortran* ${INSTALL_DIR}/include && \
     cd ${INSTALL_DIR} && \
     make all
 
-# Patch ePolyScat run script
-# Fixes mpirun dir
-# TODO: should fix in MACH.gen file instead.
-# RUN patch -u ${epsBinDir}/ePolyScat -i ePolyScat.3885d87.patch
-# UPDATE: now fixed in .gen file (for system mpirun)
-
 # Test build - currently need MPI flags to run as root.
-# TODO: fix make tests
 ENV OMPI_ALLOW_RUN_AS_ROOT=1
 ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
@@ -125,14 +115,22 @@ ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 # RUN ${pe}/ePolyScat ${pe}/tests/test01.inp > ${pe}/tests/test01.out
 #  diff ${pe}/tests/test01.out ${pe}/tests/test01.ostnd
 
-# Run all tests
+# Run all tests - makefile
 # Should set this as a separate script, as it can take a while
-# TODO: diffs with std output?
-# RUN mkdir ${pe}/tests/outdir.${MACH} && /
+# RUN mkdir ${pe}/tests/outdir.${MACH} && \
 #    cd ${INSTALL_DIR} && \
 #    make testall
 
+# Run all tests - with custom script, including diffs.
+# Note this takes ~1-2 hours.
+# 07/07/22 - this is working at build time OK, should add a flag/option!
+# RUN mkdir -p ${pe}/tests/outdir.${MACH} && \
+#    ./runTests.sh | tee ${pe}/tests/outdir.${MACH}/testLog.txt
+
 # Install numdiff for testing
-RUN ./installNumdiff.sh
+# Install from source
+# RUN ./installNumdiff.sh
+# PKG manager install - now included in main install sequence above.
+# RUN apt install numdiff
 
 CMD [ "/bin/bash" ]

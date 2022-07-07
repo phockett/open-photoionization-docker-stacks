@@ -51,7 +51,7 @@ if [ "$useMake" = true ]; then
     # Use basename here, see https://stackoverflow.com/questions/20796200/how-to-loop-over-files-in-directory-and-change-path-and-add-suffix-to-filename
     baseName=$(basename "$f" .out)
     numdiff -E -a 1e-4 -z @ $f ${pe}/tests/${baseName}.ostnd -O > ${baseName}.diff.overview
-    numdiff -E -a 1e-4 -z @ $f ${pe}/tests/${baseName}.ostnd > ${baseName}.diff
+    numdiff -E -a 1e-4 -z @ -V $f ${pe}/tests/${baseName}.ostnd > ${baseName}.diff
 
   done
 
@@ -60,14 +60,20 @@ fi
 if [ "$useScript" = true ]; then
   echo "Running ePS test jobs with runJobs.sh, NCPUS=${NCPUS}"
 
-  jobPath="${1:-/data}"
-  epsBin="${2:-${pe}/bin/$MACH/ePolyScat}"
+  # Set paths, either passed or env defaults.
+  # Note this assumes jobPath == ePS tests dir, also as location of standard outputs *.ostnd
+  jobPath="${1:-${pe}/tests}"
+  outDir="${2:-${jobPath}/outdir.${MACH}}"
+  epsBin="${3:-${pe}/bin/$MACH/ePolyScat}"
 
   # Copy test jobs
-  cp ${pe}/tests/ ${jobPath} -r
-  cd ${jobPath}/tests/
+  # cp ${pe}/tests/ ${jobPath} -r
+  # cd ${jobPath}/tests/
+
   # files=*.out
+  cd ${jobPath}
   files=$(find . -type f -name 'test[0-9][0-9].inp')
+
   N=1
 
   for f in $files
@@ -78,10 +84,13 @@ if [ "$useScript" = true ]; then
 
     # take action on each file. $f store current file name
     baseName=$(basename "$f" .inp)
-    $epsBin $jobPath/tests/$f 1> $jobPath/tests/${baseName}.out 2> $jobPath/tests/${baseName}.err
+    $epsBin $jobPath/$f 1> $outDir/${baseName}.out 2> $outDir/${baseName}.err
     # Use basename here, see https://stackoverflow.com/questions/20796200/how-to-loop-over-files-in-directory-and-change-path-and-add-suffix-to-filename
-    numdiff -E -a 1e-4 -z @ $jobPath/tests/${baseName}.out ${pe}/tests/${baseName}.ostnd -O > ${baseName}.diff.overview
-    numdiff -E -a 1e-4 -z @ $jobPath/tests/${baseName}.out ${pe}/tests/${baseName}.ostnd > ${baseName}.diff
+    # Numdiff results with some reasonable error limits.
+    # This will generally just pull timing and core differences if all is well.
+    # TODO: additional filtering to confirm this per file - filter diffs on line start?
+    numdiff -E -r 0.01 -a 1e-4 -z @ $outDir/${baseName}.out $jobPath/${baseName}.ostnd -O > $outDir/${baseName}.diff.overview
+    numdiff -E -r 0.01 -a 1e-4 -z @ -V $outDir/${baseName}.out $jobPath/${baseName}.ostnd > $outDir/${baseName}.diff
 
     # Job & total timing, and log.
     duration=$SECONDS
