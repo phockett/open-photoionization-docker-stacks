@@ -5,6 +5,7 @@
 # Note this assumes ENV paths set $pe and working dir as per Docker.
 #
 # 06/07/22
+# 08/05/23 fixed paths issues for runJobs.sh wrapped version.
 
 useMake=false
 useScript=true
@@ -66,6 +67,8 @@ if [ "$useScript" = true ]; then
   outDir="${2:-${jobPath}/outdir.${MACH}}"
   epsBin="${3:-${pe}/bin/$MACH/ePolyScat}"
 
+  mkdir -p ${outDir}
+
   # Copy test jobs
   # cp ${pe}/tests/ ${jobPath} -r
   # cd ${jobPath}/tests/
@@ -84,7 +87,9 @@ if [ "$useScript" = true ]; then
 
     # take action on each file. $f store current file name
     baseName=$(basename "$f" .inp)
-    $epsBin $jobPath/$f 1> $outDir/${baseName}.out 2> $outDir/${baseName}.err
+    echo $basename
+    echo "Running cmd: $epsBin $jobPath/${baseName}.inp 1> $outDir/${baseName}.out 2> $outDir/${baseName}.err"
+    $epsBin $jobPath/${baseName}.inp 1> $outDir/${baseName}.out 2> $outDir/${baseName}.err
     # Use basename here, see https://stackoverflow.com/questions/20796200/how-to-loop-over-files-in-directory-and-change-path-and-add-suffix-to-filename
     # Numdiff results with some reasonable error limits.
     # This will generally just pull timing and core differences if all is well.
