@@ -1,0 +1,41 @@
+# Quick compose config for testing LUNA CONTAINER
+# 15/05/23
+#
+# - Build with `docker-compose build`
+#
+# Modified for Syno env + some local settings + ePS version of lab
+# 10/08/21
+# Original: https://github.com/defeo/jupyterhub-docker
+# For more options, see https://docs.docker.com/compose/reference/
+
+version: '3.7'
+
+services:
+
+  jupyterlab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Set additional env options, see https://jupyter-docker-stacks.readthedocs.io/en/latest/using/common.html#docker-options
+    # environment:
+    #   GRANT_SUDO: yes
+
+    image: fock:5000/luna:v150523
+    container_name: luna
+    user: jovyan  # Set user for volume mounts, otherwise will be assigned to root
+    # network_mode: none
+    # command: echo
+    ports:
+      - 8999:8888
+     # - 8966:8966    # Now set in ~/.jupyter/jupyter_server_config.py
+    volumes:
+      - jupyter_user:/home/jovyan/work
+      - jupyter_data:/home/jovyan/.jupyter  # Add persistent settings dirs, hopefully
+
+
+# Set persistent volume with default Docker settings.
+volumes:
+  jupyter_data:
+
+  jupyter_user:
