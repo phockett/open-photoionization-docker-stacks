@@ -21,7 +21,7 @@ services:
     # environment:
     #   GRANT_SUDO: yes
 
-    image: fock:5000/luna:v150523
+    image: luna:v150523
     container_name: luna
     user: jovyan  # Set user for volume mounts, otherwise will be assigned to root
     # network_mode: none
