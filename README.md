@@ -30,3 +30,8 @@ Gamess existing Docker options:
 - https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu (set to local copy of source code)
 - https://github.com/saromleang/docker-gamess (with source download, requires weekly password from https://www.msg.chem.iastate.edu/gamess/License_Agreement.html)
 - https://catalog.ngc.nvidia.com/orgs/hpc/containers/gamess (Nvidia CUDA-accelerated version)
+
+See also
+--------
+
+- For an online version of ePS and other tools, try [the AMOS gateway](https://amosgateway.org/).
