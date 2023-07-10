@@ -40,3 +40,7 @@ Run with additional args, e.g. number of CPUS and container name
 ... and with log file output
 
   `docker run -d --rm -v <host-dir>:/data --env NCPUS=24 --name eps24 eps bash -c "./runJobs.sh /data/jobs > /data/jobs/log.txt"`
+
+# See also
+
+- For an online version of ePS and other tools, try [the AMOS gateway](https://amosgateway.org/).
