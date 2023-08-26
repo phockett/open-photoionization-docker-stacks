@@ -18,7 +18,7 @@ Tools
   - [ePSproc](https://epsproc.readthedocs.io/) Post-processing for ePolyScat matrix elements, including molecular and aligned frame photoelectron angular distributions. Many tools can also be used without ePolyScat. (Python)
   - [Luna.jl (from Lupo Lab)](https://github.com/LupoLab/Luna.jl) Simulation of nonlinear optical dynamics — both in waveguides (such as optical fibres) and free-space geometries. (Julia)
   - [PEMtk](https://pemtk.readthedocs.io/) The photoelectron metrology toolkit. Experimental and theoretical analysis tools. (Python, note development version uses ePSproc on the back-end.)
-  - [Quantum Metrology with Photoelectrons Vol. 3](https://github.com/phockett/Quantum-Metrology-with-Photoelectrons-Vol3) can be found in a separate repository, [including Dockerfiles](https://github.com/phockett/Quantum-Metrology-with-Photoelectrons-Vol3#docker-builds), or [on DockerHub](https://hub.docker.com/r/epsproc/quantum-met-vol3). This image contains ePSproc & PEMtk, plus the book source code and all required packages.
+  - [Quantum Metrology with Photoelectrons Vol. 3](https://github.com/phockett/Quantum-Metrology-with-Photoelectrons-Vol3) can be found in a separate repository, [including Dockerfiles](https://github.com/phockett/Quantum-Metrology-with-Photoelectrons-Vol3#docker-builds), or [on DockerHub](https://hub.docker.com/r/epsproc/quantum-met-vol3) or Zenodo ![zenodo.8286020.svg](https://zenodo.org/badge/DOI/10.5281/zenodo.8286020.svg). This image contains ePSproc & PEMtk, plus the book source code and all required packages.
 
 
 To follow
