@@ -68,3 +68,5 @@ docker-slurm-julia-dispatch.sh <scanname> <cores> <run script> <docker container
 ```
 
 NOTE that the script currently HAS TO BE CALLED FROM THE WORKING DIRECTORY, containing the job to run. The script can be called using the full path if required, e.g. `<path to script>/docker-slurm-julia-dispatch.sh <scanname> <cores> <run script> <docker container>`.
+
+For running parallel Julia process from a notebook, see https://github.com/phockett/Luna.jl-jupyterDispatch.
