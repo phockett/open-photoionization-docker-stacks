@@ -1,7 +1,8 @@
 # ePSproc + JupyterLab builds with Docker
 
-Dockerfiles for ePSproc, based on [Jupyter Docker Stacks images](https://jupyter-docker-stacks.readthedocs.io/en/latest/index.html), are in `/docker`.
+Dockerfiles for ePSproc, based on [Jupyter Docker Stacks images](https://jupyter-docker-stacks.readthedocs.io/en/latest/index.html).
 
+For updated builds (plus additional tools) Dec 2023, see also the [Quantum Metrology with Photoelectrons repo](https://github.com/phockett/Quantum-Metrology-with-Photoelectrons-Vol3/tree/main/docker), and these builds are also available [from Docker hub](https://hub.docker.com/r/epsproc/quantum-met-vol3), simply run `docker pull epsproc/quantum-met-vol3`.
 
 ## Quick build container only
 
