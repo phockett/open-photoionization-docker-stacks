@@ -103,8 +103,5 @@ RUN ./scripts/build_ukrmol.sh
 
 #*** Finalise...
 
-# ALLOW OPENMPI run as root, or change user...
-#ENV OMPI_ALLOW_RUN_AS_ROOT=1
-#ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
 CMD [ "/bin/bash" ]
