@@ -17,11 +17,11 @@
 BASEDIR=/opt
 cd $BASEDIR
 
-# Optional if not configured in base env
-BLAS_DIR=${BLAS_DIR:-/usr/lib/atlas-base}
-MPI_DIR=${MPI_DIR:-/usr/lib/openmpi}
-LD_LIBRARY_PATH=${BLAS_DIR}:$LD_LIBRARY_PATH
-LD_LIBRARY_PATH=${MPI_DIR}:$LD_LIBRARY_PATH
+# Optional if not configured in base env - ACUTALLY not required currently.
+# BLAS_DIR=${BLAS_DIR:-/usr/lib/atlas-base}
+# MPI_DIR=${MPI_DIR:-/usr/lib/openmpi}
+# LD_LIBRARY_PATH=${BLAS_DIR}:$LD_LIBRARY_PATH
+# LD_LIBRARY_PATH=${MPI_DIR}:$LD_LIBRARY_PATH
 
 #*** GET SOURCE
 echo *** Downloading source files...
