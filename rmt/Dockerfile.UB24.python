@@ -1,0 +1,55 @@
+# RMT Docker build - secondary container with Python + tools
+#
+# 26/06/24
+#
+# Build from RMT base layer, fock:5000/rmt:v250624
+#
+# BUILD:
+#    docker build -t fock:5000/rmtpython:v250624 -f Dockerfile.UB24.python .
+#
+# RUN:
+#    docker run -l "user=$(whoami)" --name rmtTestPython --rm -it fock:5000/rmtpython:v250624 bash
+
+FROM fock:5000/rmt:v250624
+
+#*** Quick Miniconda install, from https://fabiorosado.dev/blog/install-conda-in-docker/
+# See also https://github.com/anaconda/docker-images/blob/main/miniconda3/debian/Dockerfile
+# Could just build on that image...?
+
+# Install base utilities
+RUN apt-get update \
+    && apt-get install -y build-essential \
+    && apt-get install -y wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install miniconda
+ENV CONDA_DIR /opt/conda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p /opt/conda
+
+# Put conda in path so we can use conda activate
+ENV PATH=$CONDA_DIR/bin:$PATH
+
+
+#*** RMT python tools install
+
+RUN cd rmt && pip install -r requirements-dev.txt && \
+    pip install . && make -C /opt/rmt/docs html
+
+
+# Unit tests (optional) - NOTE THIS requires python + requirements-dev.txt installed.
+RUN cd rmt && mkdir -p build && cd build && \
+    cmake -D RMT_TESTING=ON ../source && make
+
+# Run unit tests - echos to terminal
+RUN /opt/rmt/build/bin/RMT-tester 
+
+# Empty file?
+# &> /opt/rmt/unit_tests.out
+
+# Piping to tee kills tests!
+#| tee /opt/rmt/unit_tests.out 
+
+    
+CMD [ "/bin/bash" ]

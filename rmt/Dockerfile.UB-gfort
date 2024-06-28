@@ -1,0 +1,100 @@
+# RMT Docker build - Ubuntu base with OpenMPI and GNU compilers
+#
+# 28/06/24, PH  v1 Tidied up from test builds.
+#
+# Basic build:
+#   docker build -f Dockerfile.UB-gfort .
+#
+# FOCK BUILDS with tags:
+#   docker build -f Dockerfile.UB-gfort -t fock:5000/rmt:v250624 .
+#
+# RUN
+#   docker run -l "user=$(whoami)" --name rmt --rm -it fock:5000/rmt:v250624 bash
+#
+# Credits:
+#    General outline based on DrSnowbird's Gamess base setup from https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/Dockerfile.gamess
+#    Note this is also configured for passing build args, with script https://github.com/DrSnowbird/docker-hpc-gamess-ubuntu/blob/master/build.sh
+#    RMT codes from the team at https://gitlab.com/Uk-amor/RMT/
+
+
+
+#*** Main setup config
+ARG IMAGE_VERSION=${IMAGE_VERSION:-latest}
+FROM ubuntu:$IMAGE_VERSION
+
+# Optional
+# ARG CMAKE_VERSION=3.29.6
+
+# Additional install scripts
+COPY ./scripts ./scripts
+
+
+#*** Original setup with tweaks follows
+#    This installs base packages, including gfortran & openmpi
+
+# MAINTAINER DrSnowbird "openkbs.org@gmail.com"
+
+ENV DEBIAN_FRONTEND noninteractive
+
+#### Build argument ####
+# Modify by adding the following argument during docker build:
+#
+#   --build-arg BLAS=[none|atlas]
+#
+ARG BLAS=${BLAS:-atlas}
+ARG BLAS_DIR=${BLAS_DIR:-/usr/lib/atlas-base}
+
+ARG MPI=${MPI:-openmpi}
+ARG MPI_DIR=${MPI_DIR:-/usr/lib/openmpi}
+
+# ref: http://lsi.ugr.es/jmantas/pdp/ayuda/datos/instalaciones/Install_OpenMPI_en.pdf
+# Install tools & libs - note default gfortran for UB22 is v11.
+# NOTE: added build-essential here, which also pulls g++ and other tools.
+RUN apt-get update \
+    && apt-get install -y nano make build-essential \
+    && apt-get install -y openmpi-bin openmpi-common libopenmpi-dev \
+    && apt-get install -y libblas-dev liblapack-dev \
+    && apt-get install -y libatlas-base-dev libatlas3-base \
+    && apt-get install -y numdiff wget git unzip \
+    && apt-get clean autoclean \
+    && apt-get autoremove -y
+    
+ENV LD_LIBRARY_PATH=${BLAS_DIR}:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=${MPI_DIR}:$LD_LIBRARY_PATH
+
+#### ---- fix openmpi's include folder is located at different location
+RUN mkdir -p /usr/lib64 && \
+    ln -s ${BLAS_DIR} /usr/lib64/atlas && \
+    ln -s ${MPI_DIR} /usr/lib64/openmpi && \
+    ln -s ${MPI_DIR} /opt/openmpi
+    
+    
+#*** Additions for RMT builds
+
+#*** Install Cmake
+RUN ./scripts/install_cmake.sh
+
+
+#*** RMT suite & tools
+
+#*** Build RMT & R-matrix II
+RUN ./scripts/build_rmt.sh
+
+# Unit tests (optional) - NOTE THIS requires python + requirements-dev.txt installed.
+# SEE Dockerfile.python for extended build.
+# RUN cd rmt && mkdir build && cd build && \
+#    cmake -D RMT_TESTING=ON ../source && make
+
+
+#*** Build GBTOLib, UKRMol+
+
+RUN ./scripts/build_ukrmol.sh
+
+
+#*** Finalise...
+
+# ALLOW OPENMPI run as root, or change user...
+ENV OMPI_ALLOW_RUN_AS_ROOT=1
+ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
+CMD [ "/bin/bash" ]
