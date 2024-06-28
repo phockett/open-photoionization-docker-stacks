@@ -20,13 +20,7 @@
 
 #*** Main setup config
 ARG IMAGE_VERSION=${IMAGE_VERSION:-latest}
-FROM ubuntu:$IMAGE_VERSION
-
-# Optional
-# ARG CMAKE_VERSION=3.29.6
-
-# Additional install scripts
-COPY ./scripts ./scripts
+FROM ubuntu:$IMAGE_VERSION AS base
 
 
 #*** Original setup with tweaks follows
@@ -69,7 +63,18 @@ RUN mkdir -p /usr/lib64 && \
     ln -s ${MPI_DIR} /opt/openmpi
     
     
-#*** Additions for RMT builds
+#*** RMT builds
+
+# Run as 2nd stage
+FROM base
+
+# Optional
+# ARG CMAKE_VERSION=3.29.6
+
+WORKDIR /opt
+
+# Additional install scripts
+COPY ./scripts ./scripts
 
 #*** Install Cmake
 RUN ./scripts/install_cmake.sh
@@ -88,13 +93,18 @@ RUN ./scripts/build_rmt.sh
 
 #*** Build GBTOLib, UKRMol+
 
+# ALLOW OPENMPI run as root, or change user...
+# NOTE: ukrmol build script will fail without this currently.
+ENV OMPI_ALLOW_RUN_AS_ROOT=1
+ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
 RUN ./scripts/build_ukrmol.sh
 
 
 #*** Finalise...
 
 # ALLOW OPENMPI run as root, or change user...
-ENV OMPI_ALLOW_RUN_AS_ROOT=1
-ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+#ENV OMPI_ALLOW_RUN_AS_ROOT=1
+#ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
 CMD [ "/bin/bash" ]
